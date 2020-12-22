@@ -43,7 +43,7 @@ def get_nii_img(input):
         nii_img = config["fmri"]
     return nii_img     
 
-def correctPE_nii(pe, nii_img):
+def correctPE(pe, nii_img):
     
     #if it's using ijk already don't need to do anything
     if pe[0] == 'i' or pe[0] == 'j' or pe[0] == 'k':
