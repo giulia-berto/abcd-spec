@@ -43,14 +43,16 @@ def get_nii_img(input):
         nii_img = config["fmri"]
     return nii_img     
 
-def correctPE(pe, nii_img):
-    img = nib.load(nii_img)
-    codes = nib.aff2axcodes(img.affine)
+def correctPE_nii(pe, nii_img):
+    
     #if it's using ijk already don't need to do anything
     if pe[0] == 'i' or pe[0] == 'j' or pe[0] == 'k':
         print("Phase Encoding Direction conversion not needed.")
         return pe
-    #convert xyz to ijk 
+    
+    #convert xyz to ijk
+    img = nib.load(nii_img)
+    codes = nib.aff2axcodes(img.affine) 
     ax_idcs = {"x": 0, "y": 1, "z": 2}
     axis = ax_idcs[pe[0]]
     if codes[axis] in ('L', 'R'):
@@ -59,15 +61,24 @@ def correctPE(pe, nii_img):
         updated_pe = 'j'
     if codes[axis] in ('I', 'S'):
         updated_pe = 'k'
+    
     #flip polarity if it's using L/P/I
     inv = pe[1:] == "-"
-    if codes[axis] in ('L', 'P', 'I'):
-        inv = not inv 
+    if pe[0] == 'x':
+        if codes[0] == 'L':
+            inv = not inv 
+    if pe[0] == 'y':
+        if codes[1] == 'P':
+            inv = not inv 
+    if pe[0] == 'z':
+        if codes[2] == 'I':
+            inv = not inv 
     if inv:
-        updated_pe += "-" 
+        updated_pe += "-"
     print(f"Orientation: {codes}")    
-    print(f"Phase Encoding Direction updated: {updated_pe}")    
-    return updated_pe      
+    print(f"Phase Encoding Direction updated: {updated_pe}") 
+
+    return updated_pe     
 
 def outputSidecar(path, input):
     with open(path, 'w') as outfile:
