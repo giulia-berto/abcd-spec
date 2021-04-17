@@ -104,7 +104,9 @@ for id, input in enumerate(config["_inputs"]):
         #raise invalid literal ValueError exception
         try:
             _run = utils.clean(input["meta"]["run"])
-            run = str(int(_run))
+            run = str(int(_run)) #zero-cropped
+            if modality == 'meg' or modality == 'eeg':
+                run = str(_run) #not zero-cropped
             name+="_run-"+run
         except ValueError:
             print("can't parse run.. ignoring", input["meta"]["run"])
@@ -171,23 +173,20 @@ for id, input in enumerate(config["_inputs"]):
         intended_paths.append(dest_under_sub+"_dwi.nii.gz")
 
     elif input["datatype"] == utils.FUNC_TASK:
-
-        for key in input["keys"]:
-            src=config[key]
-            if src.endswith("bold.nii.gz"):
-                utils.link(src, dest+"_bold.nii.gz")
-            if src.endswith("events.tsv"):
-                utils.link(src, dest+"_events.tsv")
-            if src.endswith("events.json"):
-                utils.link(src, dest+"_events.json")
-            if src.endswith("sbref.nii.gz"):
-                utils.link(src, dest+"_sbref.nii.gz")
-            if src.endswith("sbref.json"):
-                utils.link(src, dest+"_sbref.json")
-            if src.endswith("physio.tsv.gz"):
-                utils.link(src, dest+"_physio.tsv.gz")
-            if src.endswith("physio.json"):
-                utils.link(src, dest+"_physio.json")
+        src=os.path.join(input_dir, 'bold.nii.gz')
+        utils.link(src, dest+"_bold.nii.gz")
+        src=os.path.join(input_dir, 'events.tsv')
+        utils.link(src, dest+"_events.tsv")
+        src=os.path.join(input_dir, 'events.json')
+        utils.link(src, dest+"_events.json")
+        src=os.path.join(input_dir, 'sbref.nii.gz')
+        utils.link(src, dest+"_sbref.nii.gz")
+        src=os.path.join(input_dir, 'sbref.json')
+        utils.link(src, dest+"_sbref.json")
+        src=os.path.join(input_dir, 'physio.tsv.gz')
+        utils.link(src, dest+"_physio.tsv.gz")
+        src=os.path.join(input_dir, 'physio.json')
+        utils.link(src, dest+"_physio.json")
 
         utils.outputSidecar(dest+"_bold.json", input)
 
