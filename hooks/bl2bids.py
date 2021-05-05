@@ -242,7 +242,13 @@ for id, input in enumerate(config["_inputs"]):
             if not key.endswith("_json"):
                 nii_key = key
                 src=os.path.join(input_dir, nii_key+".nii.gz")
-                utils.link(src, dest+"_"+nii_key+".nii.gz")
+                if key.endswith("epi1") or key.endswith("epi2"):
+                    nii_img=os.path.join(input_dir, nii_key+".nii.gz")
+                    if os.path.exists(nii_img):
+                        direction = utils.determineDir(input, nii_img, nii_key=nii_key)
+                        utils.link(src, dest+"_dir-"+direction+"_epi.nii.gz")
+                else:
+                    utils.link(src, dest+"_"+nii_key+".nii.gz")
 
     elif input["datatype"] == utils.MEG_CTF:
         src=os.path.join(input_dir, 'meg.ds')
@@ -375,9 +381,13 @@ for input in config["_inputs"]:
                 nii_key = key[:-5] #remove suffix "_json"
                 src=os.path.join(input_dir, nii_key+".json")
                 f_json = dest+"_"+nii_key+".json"
+                nii_img=os.path.join(input_dir, nii_key+".nii.gz")
+                if nii_key.endswith("epi1") or nii_key.endswith("epi2"):
+                    if os.path.exists(nii_img):
+                        direction = utils.determineDir(input, nii_img, nii_key=nii_key)
+                        f_json = dest + "_dir-" + direction + "_epi.json"
                 utils.copyJSON(src, f_json, override={"IntendedFor": intended_paths})
                 #fix PhaseEncodingDirection
-                nii_img=os.path.join(input_dir, nii_key+".nii.gz")
                 if os.path.exists(nii_img):
                     print(nii_key)
                     updated_pe = utils.correctPE(input, nii_img, nii_key)

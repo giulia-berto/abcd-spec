@@ -53,13 +53,26 @@ def getModality(input):
 
 def correctPE(input, nii_img, nii_key=None):
 
-    if nii_key in input["meta"]:
+    #if nii_key in input["meta"]:
+    #    pe_direction = input["meta"][nii_key]["PhaseEncodingDirection"]
+    #elif "PhaseEncodingDirection" in input["meta"]:
+    #    pe_direction = input["meta"]["PhaseEncodingDirection"]
+    #else:
+    #    print("Cannot read PhaseEncodingDirection.")
+
+    json_sidecar=nii_img[:-6]+"json"
+    if os.path.exists(json_sidecar):
+        with open(json_sidecar) as f:
+            json_sidecar = json.load(f)
+        pe_direction=json_sidecar["PhaseEncodingDirection"]
+    elif nii_key in input["meta"]:
         pe_direction = input["meta"][nii_key]["PhaseEncodingDirection"]
     elif "PhaseEncodingDirection" in input["meta"]:
         pe_direction = input["meta"]["PhaseEncodingDirection"]
     else:
         print("Cannot read PhaseEncodingDirection.")
 
+    print(f"Phase Encoding Direction: {pe_direction}")
     axes = (("R", "L"), ("A", "P"), ("S", "I"))
     proper_ax_idcs = {"i": 0, "j": 1, "k": 2}
 
@@ -101,6 +114,60 @@ def correctPE(input, nii_img, nii_key=None):
 
     return proper_pe_direction
 
+def determineDir(input, nii_img, nii_key=None):
+    '''
+    Takes pe_direction and image orientation to determine direction
+    required by BIDS "_dir-" label
+
+    Based on https://github.com/nipreps/fmriprep/issues/2341 and original code
+    comes from Chris Markiewicz and Mathias Goncalves
+    '''
+    #if nii_key in input["meta"]:
+    #    pe_direction = input["meta"][nii_key]["PhaseEncodingDirection"]
+    #elif "PhaseEncodingDirection" in input["meta"]:
+    #    pe_direction = input["meta"]["PhaseEncodingDirection"]
+    #else:
+    #    print("Cannot read PhaseEncodingDirection.")
+
+    json_sidecar=nii_img[:-6]+"json"
+    if os.path.exists(json_sidecar):
+        with open(json_sidecar) as f:
+            json_sidecar = json.load(f)
+        pe_direction=json_sidecar["PhaseEncodingDirection"]
+    elif nii_key in input["meta"]:
+        pe_direction = input["meta"][nii_key]["PhaseEncodingDirection"]
+    elif "PhaseEncodingDirection" in input["meta"]:
+        pe_direction = input["meta"]["PhaseEncodingDirection"]
+    else:
+        print("Cannot read PhaseEncodingDirection.")
+
+    img = nib.load(nii_img)
+    ornt = nib.aff2axcodes(img.affine)
+
+    axes = (("R", "L"), ("A", "P"), ("S", "I"))
+    ax_idcs = {"i": 0, "j": 1, "k": 2}
+    axcode = ornt[ax_idcs[pe_direction[0]]]
+    inv = pe_direction[1:] == "-"
+
+    if pe_direction[0] == 'i':
+        if 'L' in axcode:
+            inv = not inv
+    elif pe_direction[0] == 'j':
+        if 'P' in axcode:
+            inv = not inv
+    elif pe_direction[0] == 'k':
+        if 'I' in axcode:
+            inv = not inv
+
+    for ax in axes:
+        for flip in (ax, ax[::-1]):
+            if flip[not inv].startswith(axcode):
+                direction = "".join(flip)
+
+    print(f"Direction: {direction}")
+
+    return direction
+
 def outputSidecar(path, input):
     with open(path, 'w') as outfile:
 
@@ -124,9 +191,9 @@ def outputSidecar(path, input):
                     updated_pe = correctPE(input, path)
                     input["meta"]["PhaseEncodingDirection"] = updated_pe
 
-        #adjust subject field in sidecar
-        subject = input["meta"]["subject"]
-        input["meta"]["subject"] = re.sub(r'[^0-9]+', '', subject)
+        #adjust subject field in sidecar (one dataset has a redundant prefix sub-)
+        #subject = input["meta"]["subject"]
+        #input["meta"]["subject"] = re.sub('sub-', '', subject)
 
         json.dump(input["meta"], outfile)
 
